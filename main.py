@@ -1,22 +1,39 @@
 import os
 import zipfile
+import json
 from telegram import Update
 from telegram.ext import ApplicationBuilder, MessageHandler, CommandHandler, ContextTypes, filters
 
 TOKEN = "8669320374:AAG32jAeg4VKlSox3ty_Vsalfrgqi6hCX5o"
 
 BASE_DIR = "files"
+STATE_FILE = "state.json"
+
 os.makedirs(BASE_DIR, exist_ok=True)
 
-user_files = {}
+# ---------- STATE HELPERS ----------
+def load_state():
+    if os.path.exists(STATE_FILE):
+        with open(STATE_FILE, "r") as f:
+            return json.load(f)
+    return {}
 
+def save_state(state):
+    with open(STATE_FILE, "w") as f:
+        json.dump(state, f)
+
+user_files = load_state()
+
+
+# ---------- HANDLERS ----------
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "فایل‌هاتو بفرست. بعدش /done بزن تا زیپ کنم."
     )
 
+
 async def handle_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.message.from_user.id
+    user_id = str(update.message.from_user.id)
 
     if user_id not in user_files:
         user_files[user_id] = []
@@ -28,11 +45,16 @@ async def handle_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await file.download_to_drive(save_path)
 
     user_files[user_id].append(save_path)
+    save_state(user_files)
 
-    await update.message.reply_text(f"گرفتم ✔️ ({len(user_files[user_id])})")
+    await update.message.reply_text(
+        f"گرفتم ✔️ ({len(user_files[user_id])})"
+    )
+
 
 async def done(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.message.from_user.id
+    user_id = str(update.message.from_user.id)
+
     files = user_files.get(user_id, [])
 
     if not files:
@@ -49,15 +71,30 @@ async def done(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # cleanup
     for f in files:
-        os.remove(f)
-    os.remove(zip_path)
+        try:
+            os.remove(f)
+        except:
+            pass
+
+    try:
+        os.remove(zip_path)
+    except:
+        pass
+
     user_files[user_id] = []
+    save_state(user_files)
+
 
 async def reset(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.message.from_user.id
+    user_id = str(update.message.from_user.id)
+
     user_files[user_id] = []
+    save_state(user_files)
+
     await update.message.reply_text("ریست شد.")
 
+
+# ---------- APP ----------
 app = ApplicationBuilder().token(TOKEN).build()
 
 app.add_handler(CommandHandler("start", start))
