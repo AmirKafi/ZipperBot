@@ -3,7 +3,7 @@ import zipfile
 from telegram import Update
 from telegram.ext import ApplicationBuilder, MessageHandler, CommandHandler, ContextTypes, filters
 
-TOKEN = "YOUR_BOT_TOKEN"
+TOKEN = "8669320374:AAG32jAeg4VKlSox3ty_Vsalfrgqi6hCX5o"
 
 BASE_DIR = "files"
 os.makedirs(BASE_DIR, exist_ok=True)
